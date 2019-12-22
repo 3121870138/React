@@ -1,0 +1,86 @@
+import React from 'react';
+import './styles.less'
+import { getTableData } from '@/actions/table'
+import { connect } from 'react-redux'
+import { Table, Pagination } from 'antd'
+import qs from 'qs'
+
+export default @connect(state => {
+    return {
+        tableData: state.table.tableData
+    }
+}, {
+    getTableData, //分页
+})
+class extends React.Component {
+    constructor(props) {
+        super(props)
+        this.props.getTableData(qs.stringify({
+            page: 1,
+            limit: 5
+        }))
+    }
+    onChange = (actions) => {
+        this.props.getTableData(qs.stringify({
+            page: actions, //current
+            limit: 5
+        }))
+    }
+    render() {
+        const { list = [], count } = this.props.tableData
+
+        const columns = [
+            {
+                title: '姓名',
+                dataIndex: 'title',
+            },
+            {
+                title: '年龄',
+                dataIndex: 'id',
+            },
+            {
+                title: '住址',
+                dataIndex: 'tags',
+            },
+        ];
+
+        return (
+            <div className='table'>
+                {/* <Table
+                    dataSource={list}
+                    columns={columns}
+                    rowKey={v => v.id}
+                    onChange={this.onChange}
+                    pagination={
+                        {
+                            defaultCurrent: 1, // 默认页数
+                            total: Number(count),  // 总页数
+                            pageSize: 20, // 每条的数据
+                        }
+                    }
+                /> */}
+
+                {
+                    list.map((v, k) => {
+                        return(
+                            <div key={k}>
+                                <h1>{v.title}</h1>
+                                <h1>{v.id}</h1>
+                            </div>
+                        )
+                    })
+                }
+
+                <Pagination
+                    defaultCurrent={1} // 默认页数
+                    total={Number(count)}  // 总页数
+                    pageSize={5} // 每条的数据
+                    onChange={this.onChange}
+                />
+            </div>
+        )
+    }
+}
+
+
+;
