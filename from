@@ -1,0 +1,197 @@
+import React, { PureComponent } from 'react';
+import './styles.less';
+import { connect } from 'react-redux'
+import { Table, Divider, Tag, Button, message, Popconfirm } from 'antd';
+import _ from 'loadsh'
+import qs from 'qs'
+import defaultImg from '@/static/error.png'
+import { get } from '@/utils'
+import request from '@/utils'
+import ModalGo from './model'
+// import { requestx } from '@/utils'
+// import Loding from './loding'
+
+
+export default @connect(state => ({
+    table_Data: state.table_Data
+}), {
+    getTableData: items => ({
+        type: 'TBALE_DATA',
+        payload: items
+    })
+})
+class extends PureComponent {
+    constructor(props) {
+        super(props)
+        this.state = {
+            data: [],
+            visible: false,
+            title: '', // 编辑 添加 标题
+            btnName: '', // 按钮 提示文字
+            editData: [], // 点击编辑的回显 数据
+        }
+        this.datas()
+    }
+
+    // 图片报错  显示 默认图片
+    errorImg = e => {
+        e.target.setAttribute('src', defaultImg)
+    }
+
+    // 获取全部数据
+    datas = () => {
+        const { getTableData } = this.props
+        get('/api/banner/list')
+            .then(res => {
+                getTableData(res)
+            })
+    }
+
+    // 删除 确定
+    confirm = items => {
+        request('/api/banner/delete', qs.stringify({ id: items.id }))
+            .then(res => {
+                // if (res.data.code === 200) {
+                message.success('删除成功')
+                // }
+                this.datas()
+            })
+    }
+
+    // 点击编辑按钮
+    edit = items => {
+        this.setState({
+            visible: true,
+            title: '编辑',
+            btnName: '保存',
+            editData: items
+        })
+
+    }
+
+    // 点击添加按钮 显示
+    addData = () => {
+        this.setState({
+            visible: true,
+            title: '添加',
+            btnName: '点击添加',
+            editData: []
+        })
+    }
+
+    // 接受回调函数 关闭model
+    visStatus = v => {
+        this.setState({
+            visible: v
+        })
+    }
+
+    // 点击下载
+    download = () => {
+        const { table_Data } = this.props
+        const blob = new Blob([JSON.stringify(table_Data)], { type: 'text/plain' }) //{type : 'application/json'}
+        let a = document.createElement('a')
+        let url = URL.createObjectURL(blob)
+        a.href = url
+        a.download = '表格数据'
+        a.click()
+        setTimeout(() => {
+            //删除创建的URL
+            window.URL.revokeObjectURL(url)
+        }, 0)
+
+    }
+
+
+
+    render() {
+        // const { table_Data } = this.props
+        const table_Data = _.get(this.props, 'table_Data', '暂无数据...')
+
+        const { visible, title, btnName, editData } = this.state
+        const columns = [
+            {
+                title: 'ID',
+                dataIndex: 'id',
+                key: 'id',
+                width: '130px',
+                ellipsis: true,
+            },
+            {
+                title: '名称',
+                dataIndex: 'title',
+                key: 'Title',
+                ellipsis: true,
+            },
+            {
+                title: '图片',
+                dataIndex: 'bannerUrl',
+                key: 'bannerUrl',
+                render: (tags, items) => (
+                    <img src={items.bannerUrl} onError={this.errorImg} />
+                ),
+            }, {
+                title: '描述',
+                dataIndex: 'mark',
+                key: 'mark',
+                width: '150px',
+                ellipsis: true,
+            }, {
+                title: '排序',
+                dataIndex: 'sort',
+                key: 'sort',
+                width: '100px',
+                ellipsis: true,
+                sorter: (a, b) => a.sort - b.sort,
+            },
+            {
+                title: '状态',
+                key: 'status',
+                dataIndex: 'status',
+                render: (tags, items) => (
+                    <span>
+                        {items.status == 0 ? <Tag color="red">禁用</Tag> : <Tag color="green">启用</Tag>}
+                    </span>
+                ),
+            },
+            {
+                title: '操作',
+                key: 'action',
+                width: '230px',
+                render: (text, record) => (
+                    <span>
+                        <Button type="primary" onClick={() => this.edit(record)}>编辑</Button>
+                        <Divider type="vertical" />
+                        <Popconfirm title="确定删除 ？" okText="Yes" cancelText="No" onConfirm={() => this.confirm(record)}>
+                            <Button type="danger" >删除</Button>
+                        </Popconfirm>
+                    </span>
+                ),
+            },
+        ];
+        return (
+            <div className='homeRightTable'>
+                {/* 添加 */}
+                <Button type="primary" onClick={this.addData}>
+                    添加
+                </Button>
+
+                <Button type="danger" onClick={() => this.download()} style={{ marginLeft: '20px' }}>
+                    下载
+                </Button>
+
+                {/* 对话框 */}
+                <ModalGo
+                    visible={visible}  // 控制 开关
+                    title={title}     //标题
+                    visibleStatus={this.visStatus}    //关闭 model
+                    btnName={btnName}  //btn 文字提示
+                    editData={editData}
+                />
+
+                <Table columns={columns} dataSource={table_Data} rowKey={v => v.id} />
+            </div>
+        );
+    }
+}
+
