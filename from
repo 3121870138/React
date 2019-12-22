@@ -195,3 +195,261 @@ class extends PureComponent {
     }
 }
 
+
+// Model
+import React from 'react';
+import rquest from '@/utils'
+import { connect } from 'react-redux'
+import qs from 'qs'
+import {
+    Modal,
+    Form,
+    Input,
+    Icon,
+    Button,
+    Upload,
+    Radio,
+    InputNumber,
+    message,
+
+} from 'antd';
+import { get } from '../../utils';
+
+// 对话框
+export default @connect(state => ({
+
+}), {
+    getData: () => ({
+        type: 'TBALE_DATA',
+        payload: get('/api/banner/list')
+    })
+})
+@Form.create({
+    name: 'register',
+    mapPropsToFields(props) {
+        
+        return Object.entries(props.editData).reduce((v0, [k, v]) => {
+            v0[k] = Form.createFormField({
+                value: v,
+            })
+            return v0
+        }, {})
+		// return {
+       //     name: Form.createFormField({
+       //         value: props.data.name,
+        //    }),
+       // }
+    }
+
+})
+class extends React.Component {
+
+    state = {
+        visible: false,
+        confirmDirty: false,
+        autoCompleteResult: [],
+        value: 1,
+        bannerUrl: '',
+        disalblex: false, // 点击确定按钮  loding
+    };
+
+    showModal = () => {
+        this.setState({
+            visible: true,
+        });
+    };
+
+    // 关闭model
+    handleCancel = () => {
+        this.props.visibleStatus(false)
+    };
+
+    // 点击 提交
+    handleSubmit = e => {
+        e.preventDefault();
+        this.props.form.validateFieldsAndScroll((err, values) => {
+            if (!err) {
+                const { bannerUrl } = this.state
+                const { getData, btnName, editData } = this.props
+                if (btnName === '点击添加') {
+                    this.setState({
+                        disalblex: true,
+                    });
+
+                    setTimeout(() => {
+                        this.setState({
+                            disalblex: false,
+                        });
+                    }, 2000);
+
+
+                    rquest('/api/banner/add', qs.stringify({
+                        ...values,
+                        bannerUrl
+                    }))
+                        .then(res => {
+                            console.log(res);
+
+                            if (res) {
+                                message.success('添加成功')
+                                this.handleCancel()  //关闭
+                                getData()  //获取数据
+                            }
+
+                        })
+                } else {
+                    rquest('/api/banner/update', qs.stringify({
+                        ...values,
+                        bannerUrl,
+                        id: editData.id
+                    }))
+                        .then(res => {
+                            // if (res.data.code === 200) {
+                            message.success('编辑成功')
+                            this.handleCancel()  //关闭
+                            getData()  //获取数据
+                            // }
+                        })
+                }
+
+
+            }
+        });
+    };
+
+    // 自定义 校验
+    validatorFun = (rule, value, callback) => {
+    	// 	数字和字母组合
+    	//  /^[0-9]+[a-zA-Z]+[0-9a-zA-Z]*|[a-zA-Z]+[0-9]+[0-9a-zA-Z]*$/ 
+        const reg = /^(?![A-Za-z0-9]+$)[\u4e00-\u9fa5A-Za-z0-9]*$/
+        if (value && !value.match(reg)) {
+            callback('请输入至少一个汉字');
+        }
+        callback()
+    }
+    // 图片上传
+    normFile = e => {
+        // console.log('Upload event:', e.file.response);
+        if (e.file.response) {
+            this.setState({
+                bannerUrl: e.file.response.data.url
+            })
+        }
+        return e && e.fileList;
+    };
+
+
+    // 状态
+    onChange = e => {
+        this.setState({
+            value: e.target.value,
+        });
+    };
+
+
+    render() {
+        
+        const { visible, title, btnName } = this.props
+        const { getFieldDecorator } = this.props.form;
+        const { disalblex } = this.state
+
+        const formItemLayout = {
+            labelCol: {
+                xs: { span: 9 },
+                sm: { span: 6 },
+            },
+            wrapperCol: {
+                xs: { span: 24 },
+                sm: { span: 16 },
+            },
+        };
+        const tailFormItemLayout = {
+            wrapperCol: {
+                xs: {
+                    span: 24,
+                    offset: 0,
+                },
+                sm: {
+                    span: 14,
+                    offset: 6,
+                },
+            },
+        };
+
+
+
+
+        return (
+            <div>
+
+                <Modal
+                    title={title}
+                    visible={visible}
+                    footer={null}
+                    onCancel={this.handleCancel}
+                >
+                    <Form {...formItemLayout} onSubmit={this.handleSubmit}>
+                        <Form.Item label="标题">
+                            {getFieldDecorator('title', {
+                                rules: [
+                                    {
+                                        validator: this.validatorFun
+                                    },
+                                    {
+                                        required: true,
+                                        message: '请输入标题 !',
+                                    },
+                                ],
+                            })(<Input />)}
+                        </Form.Item>
+
+                        <Form.Item label="上传图片" extra="">
+                            {getFieldDecorator('upload', {
+                                valuePropName: 'fileList',
+                                getValueFromEvent: this.normFile,
+                            })(
+                                <Upload name="file" action="http://49.235.147.95:3001/api/uploadFile" listType='picture'>
+                                    <Button>
+                                        <Icon type="upload" /> 上传图片
+                                     </Button>
+                                </Upload>,
+                            )}
+                        </Form.Item>
+
+                        <Form.Item label="状态" >
+                            {getFieldDecorator('status', {
+
+                            })(
+                                <Radio.Group >
+                                    <Radio value={1}>启用</Radio>
+                                    <Radio value={0}>禁用</Radio>
+                                </Radio.Group>
+                            )}
+                        </Form.Item>
+
+                        <Form.Item label="排序">
+                            {getFieldDecorator('sort', { initialValue: 3 })(<InputNumber />)}
+                        </Form.Item>
+
+                        <Form.Item label="描述信息">
+                            {getFieldDecorator('mark', {})(<Input.TextArea rows={4} />)}
+                        </Form.Item>
+
+                        <Form.Item {...tailFormItemLayout}>
+                            <Button type="primary" htmlType="submit" disabled={disalblex}>
+                                {btnName}
+                            </Button>
+
+                            <Button className='resetBtn' style={{ marginLeft: '30px' }}>
+                                重置
+                            </Button>
+                        </Form.Item>
+                    </Form>
+                </Modal>
+            </div>
+        );
+    }
+}
+
+
+
